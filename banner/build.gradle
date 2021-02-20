@@ -1,32 +1,32 @@
 apply plugin: 'com.android.library'
 apply plugin: 'com.github.dcendents.android-maven'
 apply plugin: 'com.jfrog.bintray'
-version = "1.4.9"
+
+version = "2.1.0"
 
 android {
-    compileSdkVersion 23
-    buildToolsVersion "23.0.3"
+    compileSdkVersion 29
 
     defaultConfig {
-        minSdkVersion 11
-        targetSdkVersion 23
-        versionCode 40
+        minSdkVersion 14
+        targetSdkVersion 29
+        versionCode 201000
         versionName version
+        consumerProguardFiles 'proguard-rules.pro'
     }
-    buildTypes {
-        release {
-            minifyEnabled false
-            proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
-        }
-    }
+
     lintOptions {
         abortOnError false
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_1_8
+        targetCompatibility JavaVersion.VERSION_1_8
     }
 }
 
 dependencies {
-    compile fileTree(dir: 'libs', include: ['*.jar'])
-    provided 'com.android.support:support-v4:23+'
+    implementation "androidx.viewpager2:viewpager2:1.0.0"
 }
 
 
@@ -41,7 +41,7 @@ install {
             project {
                 packaging 'aar'
                 // Add your description here项目描述
-                name 'Android图片轮播控件'
+                name 'Android Banner 2.0 全新轮播控件，采用viewpager2为基础控件，支持AndroidX'
                 url siteUrl
                 licenses {
                     license {

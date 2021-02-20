@@ -3,124 +3,170 @@ package com.test.banner;
 import android.content.Intent;
 import android.os.Bundle;
 import android.os.Handler;
-import android.support.v4.widget.SwipeRefreshLayout;
-import android.support.v7.app.AppCompatActivity;
-import android.view.LayoutInflater;
 import android.view.View;
-import android.view.ViewGroup;
-import android.widget.AbsListView;
-import android.widget.AdapterView;
-import android.widget.ListView;
-import android.widget.Toast;
 
-import com.test.banner.demo.BannerAnimationActivity;
-import com.test.banner.demo.BannerLocalActivity;
-import com.test.banner.demo.BannerStyleActivity;
-import com.test.banner.demo.CustomBannerActivity;
-import com.test.banner.demo.CustomViewPagerActivity;
-import com.test.banner.demo.IndicatorPositionActivity;
-import com.test.banner.loader.GlideImageLoader;
+import com.bumptech.glide.Glide;
+import com.bumptech.glide.load.resource.bitmap.RoundedCorners;
+import com.bumptech.glide.request.RequestOptions;
+import com.google.android.material.snackbar.Snackbar;
+import com.test.banner.adapter.ImageAdapter;
+import com.test.banner.adapter.ImageTitleAdapter;
+import com.test.banner.adapter.ImageTitleNumAdapter;
+import com.test.banner.adapter.MultipleTypesAdapter;
+import com.test.banner.bean.DataBean;
+import com.test.banner.ui.ConstraintLayoutBannerActivity;
+import com.test.banner.ui.GalleryActivity;
+import com.test.banner.ui.RecyclerViewBannerActivity;
+import com.test.banner.ui.TVActivity;
+import com.test.banner.ui.TouTiaoActivity;
+import com.test.banner.ui.VideoActivity;
+import com.test.banner.ui.Vp2FragmentRecyclerviewActivity;
 import com.youth.banner.Banner;
-import com.youth.banner.listener.OnBannerListener;
+import com.youth.banner.adapter.BannerImageAdapter;
+import com.youth.banner.holder.BannerImageHolder;
+import com.youth.banner.config.BannerConfig;
+import com.youth.banner.config.IndicatorConfig;
+import com.youth.banner.indicator.CircleIndicator;
+import com.youth.banner.indicator.RectangleIndicator;
+import com.youth.banner.indicator.RoundLinesIndicator;
+import com.youth.banner.util.BannerUtils;
+import com.youth.banner.util.LogUtils;
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
+import androidx.appcompat.app.AppCompatActivity;
+import androidx.swiperefreshlayout.widget.SwipeRefreshLayout;
+import butterknife.BindView;
+import butterknife.ButterKnife;
+import butterknife.OnClick;
 
-
-public class MainActivity extends AppCompatActivity implements SwipeRefreshLayout.OnRefreshListener, AdapterView.OnItemClickListener, OnBannerListener {
-    static final int REFRESH_COMPLETE = 0X1112;
-    SwipeRefreshLayout mSwipeLayout;
-    ListView listView;
+public class MainActivity extends AppCompatActivity {
+    @BindView(R.id.banner)
     Banner banner;
+    @BindView(R.id.indicator)
+    RoundLinesIndicator indicator;
+    @BindView(R.id.swipeRefresh)
+    SwipeRefreshLayout refresh;
 
-    private Handler mHandler = new Handler() {
-        public void handleMessage(android.os.Message msg) {
-            switch (msg.what) {
-                case REFRESH_COMPLETE:
-                    String[] urls = getResources().getStringArray(R.array.url4);
-                    List list = Arrays.asList(urls);
-                    List arrayList = new ArrayList(list);
-                    banner.update(arrayList);
-                    mSwipeLayout.setRefreshing(false);
-                    break;
-            }
-        }
-    };
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
-        mSwipeLayout = (SwipeRefreshLayout) findViewById(R.id.swipe);
-        mSwipeLayout.setOnRefreshListener(this);
-        listView = (ListView) findViewById(R.id.list);
-        View header = LayoutInflater.from(this).inflate(R.layout.header, null);
-        banner = (Banner) header.findViewById(R.id.banner);
-        banner.setLayoutParams(new AbsListView.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, App.H / 4));
-        listView.addHeaderView(banner);
+        ButterKnife.bind(this);
 
-        String[] data = getResources().getStringArray(R.array.demo_list);
-        listView.setAdapter(new SampleAdapter(this,data));
-        listView.setOnItemClickListener(this);
+        //自定义的图片适配器，也可以使用默认的BannerImageAdapter
+        ImageAdapter adapter = new ImageAdapter(DataBean.getTestData2());
 
-        //简单使用
-        banner.setImages(App.images)
-                .setImageLoader(new GlideImageLoader())
-                .setOnBannerListener(this)
-                .start();
+        banner.setAdapter(adapter)
+              .addBannerLifecycleObserver(this)//添加生命周期观察者
+              .setIndicator(new CircleIndicator(this))//设置指示器
+              .setOnBannerListener((data, position) -> {
+                  Snackbar.make(banner, ((DataBean) data).title, Snackbar.LENGTH_SHORT).show();
+                  LogUtils.d("position：" + position);
+              });
+
+
+        //添加item之间切换时的间距(如果使用了画廊效果就不要添加间距了，因为内部已经添加过了)
+//        banner.addPageTransformer(new MarginPageTransformer((int) BannerUtils.dp2px(10)));
+
+
+        //和下拉刷新配套使用
+        refresh.setOnRefreshListener(() -> {
+            //模拟网络请求需要3秒，请求完成，设置setRefreshing 为false
+            new Handler().postDelayed(new Runnable() {
+                @Override
+                public void run() {
+                    refresh.setRefreshing(false);
+                    //给banner重新设置数据
+                    banner.setDatas(DataBean.getTestData());
+                    //对setdatas不满意？你可以自己控制数据，可以参考setDatas()的实现修改
+//                    adapter.updateData(DataBean.getTestData2());
+                }
+            }, 3000);
+        });
 
     }
 
-    @Override
-    public void OnBannerClick(int position) {
-        Toast.makeText(getApplicationContext(),"你点击了："+position,Toast.LENGTH_SHORT).show();
-    }
 
-
-    //如果你需要考虑更好的体验，可以这么操作
-    @Override
-    protected void onStart() {
-        super.onStart();
-        //开始轮播
-        banner.startAutoPlay();
-    }
-
-    @Override
-    protected void onStop() {
-        super.onStop();
-        //结束轮播
-        banner.stopAutoPlay();
-    }
-
-
-    @Override
-    public void onRefresh() {
-        mHandler.sendEmptyMessageDelayed(REFRESH_COMPLETE, 2000);
-    }
-
-    @Override
-    public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
-        switch (position){
-            case 1:
-                startActivity(new Intent(this, BannerAnimationActivity.class));
+    @OnClick( {R.id.style_image, R.id.style_image_title, R.id.style_image_title_num, R.id.style_multiple,
+            R.id.style_net_image, R.id.change_indicator, R.id.rv_banner, R.id.cl_banner, R.id.vp_banner,
+            R.id.banner_video, R.id.banner_tv, R.id.gallery, R.id.topLine})
+    public void click(View view) {
+        indicator.setVisibility(View.GONE);
+        switch (view.getId()) {
+            case R.id.style_image:
+                refresh.setEnabled(true);
+                banner.setAdapter(new ImageAdapter(DataBean.getTestData()));
+                banner.setIndicator(new CircleIndicator(this));
+                banner.setIndicatorGravity(IndicatorConfig.Direction.CENTER);
                 break;
-            case 2:
-                startActivity(new Intent(this, BannerStyleActivity.class));
+            case R.id.style_image_title:
+                refresh.setEnabled(true);
+                banner.setAdapter(new ImageTitleAdapter(DataBean.getTestData()));
+                banner.setIndicator(new CircleIndicator(this));
+                banner.setIndicatorGravity(IndicatorConfig.Direction.RIGHT);
+                banner.setIndicatorMargins(new IndicatorConfig.Margins(0, 0,
+                        BannerConfig.INDICATOR_MARGIN, (int) BannerUtils.dp2px(12)));
                 break;
-            case 3:
-                startActivity(new Intent(this, IndicatorPositionActivity.class));
+            case R.id.style_image_title_num:
+                refresh.setEnabled(true);
+                //这里是将数字指示器和title都放在adapter中的，如果不想这样你也可以直接设置自定义的数字指示器
+                banner.setAdapter(new ImageTitleNumAdapter(DataBean.getTestData()));
+                banner.removeIndicator();
                 break;
-            case 4:
-                startActivity(new Intent(this, CustomBannerActivity.class));
+            case R.id.style_multiple:
+                refresh.setEnabled(true);
+                banner.setAdapter(new MultipleTypesAdapter(this, DataBean.getTestData()));
+                banner.setIndicator(new RectangleIndicator(this));
+                banner.setIndicatorSelectedWidth((int) BannerUtils.dp2px(12));
+                banner.setIndicatorSpace((int) BannerUtils.dp2px(4));
+                banner.setIndicatorRadius(0);
                 break;
-            case 5:
-                startActivity(new Intent(this, BannerLocalActivity.class));
+            case R.id.style_net_image:
+                refresh.setEnabled(false);
+                //方法一：使用自定义图片适配器
+//                banner.setAdapter(new ImageNetAdapter(DataBean.getTestData3()));
+
+                //方法二：使用自带的图片适配器
+                banner.setAdapter(new BannerImageAdapter<DataBean>(DataBean.getTestData3()) {
+                    @Override
+                    public void onBindView(BannerImageHolder holder, DataBean data, int position, int size) {
+                        //图片加载自己实现
+                        Glide.with(holder.itemView)
+                             .load(data.imageUrl)
+                             .thumbnail(Glide.with(holder.itemView).load(R.drawable.loading))
+                             .apply(RequestOptions.bitmapTransform(new RoundedCorners(30)))
+                             .into(holder.imageView);
+                    }
+                });
+                banner.setIndicator(new RoundLinesIndicator(this));
+                banner.setIndicatorSelectedWidth((int) BannerUtils.dp2px(15));
                 break;
-            case 6:
-                startActivity(new Intent(this, CustomViewPagerActivity.class));
+            case R.id.change_indicator:
+                indicator.setVisibility(View.VISIBLE);
+                //在布局文件中使用指示器，这样更灵活
+                banner.setIndicator(indicator, false);
+                banner.setIndicatorSelectedWidth((int) BannerUtils.dp2px(15));
+                break;
+            case R.id.gallery:
+                startActivity(new Intent(this, GalleryActivity.class));
+                break;
+            case R.id.rv_banner:
+                startActivity(new Intent(this, RecyclerViewBannerActivity.class));
+                break;
+            case R.id.cl_banner:
+                startActivity(new Intent(this, ConstraintLayoutBannerActivity.class));
+                break;
+            case R.id.vp_banner:
+                startActivity(new Intent(this, Vp2FragmentRecyclerviewActivity.class));
+                break;
+            case R.id.banner_video:
+                startActivity(new Intent(this, VideoActivity.class));
+                break;
+            case R.id.banner_tv:
+                startActivity(new Intent(this, TVActivity.class));
+                break;
+            case R.id.topLine:
+                startActivity(new Intent(this, TouTiaoActivity.class));
                 break;
         }
     }
-
-
 }
